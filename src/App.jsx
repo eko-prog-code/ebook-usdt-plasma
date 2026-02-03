@@ -1307,7 +1307,7 @@ function App() {
                             className="btn btn-review"
                             onClick={() => openReviewModal(ebook)}
                           >
-                             Review Ebook
+                            📖 Review Ebook
                           </button>
                         </div>
 
