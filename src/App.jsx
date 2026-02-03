@@ -1484,7 +1484,7 @@ function App() {
               USDT Token
             </a>
             <a href="https://www.plasma.to/" target="_blank" rel="noopener noreferrer">
-              Plasma Network
+              Plasma Web
             </a>
           </p>
         </div>
