@@ -1307,7 +1307,7 @@ function App() {
                             className="btn btn-review"
                             onClick={() => openReviewModal(ebook)}
                           >
-                            📖 Review Ebook
+                             Review Ebook
                           </button>
                         </div>
 
@@ -1766,7 +1766,7 @@ function App() {
         <div className="modal-overlay" onClick={closeReviewModal}>
           <div className="modal modal-review" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📖 Review Ebook: {selectedEbook.name}</h3>
+              <h3>📖 Review Ebook:</h3>
               <button onClick={closeReviewModal}>×</button>
             </div>
             <div className="modal-body">
