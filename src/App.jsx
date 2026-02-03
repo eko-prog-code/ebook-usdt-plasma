@@ -1483,7 +1483,7 @@ function App() {
             <a href={viewOnExplorer(USDT_ADDRESS)} target="_blank" rel="noopener noreferrer">
               USDT Token
             </a>
-            <a href="https://rpc.plasma.to" target="_blank" rel="noopener noreferrer">
+            <a href="https://www.plasma.to/" target="_blank" rel="noopener noreferrer">
               Plasma Network
             </a>
           </p>
