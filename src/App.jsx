@@ -287,6 +287,9 @@ function App() {
   // Initialize provider and check network
   useEffect(() => {
     const initApp = async () => {
+      // Always try to load ebooks even without wallet
+      await loadEbooksPublic();
+
       if (window.ethereum) {
         try {
           setNetworkStatus('connecting');
@@ -361,7 +364,6 @@ function App() {
       setSigner(null);
       setContract(null);
       setIsOwner(false);
-      setEbooks([]);
       setPurchases([]);
       setPurchaseForms({});
     } else {
@@ -525,22 +527,113 @@ function App() {
     }
   };
 
+  // Fungsi baru untuk load ebooks tanpa wallet (public)
+  const loadEbooksPublic = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Loading ebooks (public mode)...');
+
+      // Create read-only provider without wallet
+      const readOnlyProvider = new ethers.JsonRpcProvider(PLASMA_RPC_URL, PLASMA_CHAIN_ID);
+      const readOnlyContract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        readOnlyProvider
+      );
+
+      let availableEbooks = [];
+
+      // Try the optimized function first
+      const result = await safeContractCall(readOnlyContract, 'getAvailableEbooks');
+
+      if (result.success) {
+        console.log('Got ebooks via getAvailableEbooks:', result.data);
+        availableEbooks = result.data;
+      } else {
+        console.warn('Fallback to individual ebook calls:', result.error);
+
+        // Fallback: check each ID individually
+        availableEbooks = [];
+        const maxEbooksResult = await safeContractCall(readOnlyContract, 'MAX_EBOOKS');
+        const MAX_EBOOKS = maxEbooksResult.success ? Number(maxEbooksResult.data) : 10;
+
+        for (let i = 1; i <= MAX_EBOOKS; i++) {
+          try {
+            const ebookResult = await safeContractCall(readOnlyContract, 'ebooks', [i]);
+            if (ebookResult.success && ebookResult.data && ebookResult.data.isPublished) {
+              availableEbooks.push(ebookResult.data);
+            }
+          } catch (e) {
+            console.log(`Error fetching ebook ${i}:`, e.message);
+            continue;
+          }
+        }
+      }
+
+      // Format the ebooks
+      const formattedEbooks = availableEbooks.map(ebook => {
+        // Handle different response structures
+        const id = ebook.id ? Number(ebook.id) : (ebook[0] ? Number(ebook[0]) : 0);
+        const name = ebook.name || ebook[1] || `Ebook #${id}`;
+        const description = ebook.description || ebook[2] || 'No description available';
+        const price = ebook.price || ebook[3] || 0;
+        const discount = ebook.discount || ebook[4] || 0;
+        const isPublished = ebook.isPublished || ebook[6] || false;
+        const isSold = ebook.isSold || ebook[7] || false;
+        const owner = ebook.owner || ebook[5] || '0x0';
+
+        return {
+          id,
+          name,
+          description,
+          price: ethers.formatUnits(price, 6),
+          discount: Number(discount),
+          isPublished,
+          isSold,
+          owner
+        };
+      }).filter(ebook => ebook.isPublished); // Filter only published ebooks
+
+      console.log('Formatted ebooks (public):', formattedEbooks);
+      setEbooks(formattedEbooks);
+
+      // Initialize purchase forms for each ebook
+      const initialForms = {};
+      formattedEbooks.forEach(ebook => {
+        if (!ebook.isSold) {
+          initialForms[ebook.id] = {
+            buyerName: '',
+            whatsappNumber: '',
+            isProcessing: false
+          };
+        }
+      });
+      setPurchaseForms(initialForms);
+
+      // Update debug info
+      setDebugInfo(prev => ({
+        ...prev,
+        ebooksLoaded: formattedEbooks.length,
+        lastEbookLoad: new Date().toISOString(),
+        mode: 'public'
+      }));
+
+    } catch (error) {
+      console.error("Error in loadEbooksPublic:", error);
+      // Don't show alert in public mode to avoid disturbing users
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loadEbooks = async () => {
     if (!contract) return;
 
     try {
       setIsLoading(true);
-      console.log('Loading ebooks...');
+      console.log('Loading ebooks (with wallet)...');
 
       let availableEbooks = [];
-
-      // Try to get published count first
-      try {
-        const countResult = await safeContractCall(contract, 'publishedCount');
-        console.log('Published count:', countResult);
-      } catch (e) {
-        console.log('Could not get published count');
-      }
 
       // Try the optimized function first
       const result = await safeContractCall(contract, 'getAvailableEbooks');
@@ -593,7 +686,7 @@ function App() {
         };
       }).filter(ebook => ebook.isPublished); // Filter only published ebooks
 
-      console.log('Formatted ebooks:', formattedEbooks);
+      console.log('Formatted ebooks (with wallet):', formattedEbooks);
       setEbooks(formattedEbooks);
 
       // Initialize purchase forms for each ebook
@@ -613,7 +706,8 @@ function App() {
       setDebugInfo(prev => ({
         ...prev,
         ebooksLoaded: formattedEbooks.length,
-        lastEbookLoad: new Date().toISOString()
+        lastEbookLoad: new Date().toISOString(),
+        mode: 'wallet'
       }));
 
     } catch (error) {
@@ -772,6 +866,7 @@ function App() {
   const handlePurchaseEbook = async (ebookId) => {
     if (!contract || !usdtContract || !account) {
       alert('Please connect your wallet first!');
+      setShowWalletModal(true);
       return;
     }
 
@@ -954,12 +1049,15 @@ function App() {
   };
 
   const refreshData = async () => {
-    if (contract) {
+    if (contract && account) {
       await loadEbooks();
       if (isOwner) {
         await loadPurchases();
         await loadContractBalance();
       }
+    } else {
+      // If no wallet connected, use public mode
+      await loadEbooksPublic();
     }
   };
 
@@ -1036,7 +1134,6 @@ function App() {
           </div>
         </div>
       </header>
-
 
       {/* Hero Section */}
       <section className="hero">
@@ -1121,20 +1218,7 @@ function App() {
             </div>
           )}
 
-          {/* Connection Status */}
-          {!account && !isWrongNetwork && (
-            <div className="connect-prompt">
-              <p>Connect your wallet to view and purchase ebooks</p>
-              <button
-                className="btn btn-connect btn-large"
-                onClick={() => setShowWalletModal(true)}
-              >
-                🔗 Connect Wallet
-              </button>
-            </div>
-          )}
-
-          {/* Ebooks Grid */}
+          {/* Ebooks Grid - SELALU TAMPIL TANPA PERLU WALLET */}
           <div className="ebooks-grid">
             <div className="section-header">
               <h2 className="section-title">Available Ebooks</h2>
@@ -1159,13 +1243,15 @@ function App() {
               <div className="no-ebooks">
                 <div className="no-ebooks-icon">📚</div>
                 <p>No ebooks available yet.</p>
-                {isOwner && (
+                {isOwner && account ? (
                   <button
                     className="btn btn-owner"
                     onClick={() => setShowPublishModal(true)}
                   >
                     Publish Your First Ebook
                   </button>
+                ) : (
+                  <p className="connect-hint">Connect wallet as owner to publish ebooks</p>
                 )}
               </div>
             ) : (
@@ -1220,7 +1306,7 @@ function App() {
                                 value={purchaseForm.buyerName || ''}
                                 onChange={(e) => handlePurchaseFormChange(ebook.id, 'buyerName', e.target.value)}
                                 placeholder="Enter your name"
-                                disabled={isProcessing || !account || isWrongNetwork}
+                                disabled={isProcessing || isWrongNetwork}
                                 required
                               />
                             </div>
@@ -1233,17 +1319,17 @@ function App() {
                                 value={purchaseForm.whatsappNumber || ''}
                                 onChange={(e) => handlePurchaseFormChange(ebook.id, 'whatsappNumber', e.target.value)}
                                 placeholder="Enter WhatsApp number"
-                                disabled={isProcessing || !account || isWrongNetwork}
+                                disabled={isProcessing || isWrongNetwork}
                               />
                             </div>
 
                             <button
                               className={`btn btn-buy ${isProcessing ? 'processing' : ''}`}
                               onClick={() => handlePurchaseEbook(ebook.id)}
-                              disabled={ebook.isSold || isProcessing || isWrongNetwork || !account || !purchaseForm.buyerName?.trim()}
+                              disabled={ebook.isSold || isProcessing || isWrongNetwork || !purchaseForm.buyerName?.trim()}
                               title={!account ? 'Connect wallet to purchase' : ''}
                             >
-                              {isProcessing ? 'Processing...' : 'Buy Now'}
+                              {!account ? 'Connect to Buy' : (isProcessing ? 'Processing...' : 'Buy Now')}
                             </button>
                           </div>
                         ) : (
@@ -1260,8 +1346,8 @@ function App() {
             )}
           </div>
 
-          {/* Owner Dashboard */}
-          {isOwner && purchases.length > 0 && (
+          {/* Owner Dashboard - Hanya tampil jika wallet terhubung dan user adalah owner */}
+          {account && isOwner && purchases.length > 0 && (
             <div className="dashboard">
               <div className="dashboard-header">
                 <h2 className="section-title">Purchase Dashboard</h2>
@@ -1326,6 +1412,25 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Connect Prompt untuk pembelian */}
+          {!account && ebooks.some(ebook => !ebook.isSold) && (
+            <div className="connect-prompt">
+              <div className="connect-prompt-content">
+                <div className="connect-icon">🔗</div>
+                <div className="connect-text">
+                  <p><strong>Want to purchase an ebook?</strong></p>
+                  <p>Connect your wallet to complete your purchase</p>
+                </div>
+                <button
+                  className="btn btn-connect btn-large"
+                  onClick={() => setShowWalletModal(true)}
+                >
+                  Connect Wallet to Buy
+                </button>
               </div>
             </div>
           )}
