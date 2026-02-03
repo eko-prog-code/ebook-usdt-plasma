@@ -262,6 +262,10 @@ function App() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
+  
+  // State baru untuk modal Review Ebook
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedEbook, setSelectedEbook] = useState(null);
 
   // Debug state
   const [debugInfo, setDebugInfo] = useState({});
@@ -525,6 +529,18 @@ function App() {
       console.error("Error initializing contracts:", error);
       alert('Failed to initialize contracts: ' + error.message);
     }
+  };
+
+  // Fungsi untuk membuka modal Review Ebook
+  const openReviewModal = (ebook) => {
+    setSelectedEbook(ebook);
+    setShowReviewModal(true);
+  };
+
+  // Fungsi untuk menutup modal Review Ebook
+  const closeReviewModal = () => {
+    setShowReviewModal(false);
+    setSelectedEbook(null);
   };
 
   // Fungsi baru untuk load ebooks tanpa wallet (public)
@@ -1061,6 +1077,13 @@ function App() {
     }
   };
 
+  // Fungsi untuk memotong teks deskripsi agar tidak terlalu panjang di card
+  const truncateDescription = (description, maxLength = 80) => {
+    if (!description) return 'No description available';
+    if (description.length <= maxLength) return description;
+    return description.substring(0, maxLength) + '...';
+  };
+
   return (
     <div className="app">
       {/* Header */}
@@ -1274,7 +1297,19 @@ function App() {
 
                       <div className="ebook-info">
                         <h3 className="ebook-title">{ebook.name}</h3>
-                        <p className="ebook-description">{ebook.description}</p>
+                        
+                        {/* Deskripsi singkat dengan tombol Review */}
+                        <div className="ebook-description-container">
+                          <p className="ebook-description">
+                            {truncateDescription(ebook.description)}
+                          </p>
+                          <button
+                            className="btn btn-review"
+                            onClick={() => openReviewModal(ebook)}
+                          >
+                            📖 Review Ebook
+                          </button>
+                        </div>
 
                         <div className="ebook-price">
                           {ebook.discount > 0 ? (
@@ -1720,6 +1755,82 @@ function App() {
                 >
                   {isLoading ? 'Withdrawing...' : 'Withdraw All Funds'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Ebook Modal */}
+      {showReviewModal && selectedEbook && (
+        <div className="modal-overlay" onClick={closeReviewModal}>
+          <div className="modal modal-review" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📖 Review Ebook: {selectedEbook.name}</h3>
+              <button onClick={closeReviewModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="review-content">
+                <div className="review-header">
+                  <div className="review-cover">
+                    <img src={coverBook} alt={selectedEbook.name} />
+                  </div>
+                  <div className="review-meta">
+                    <h4 className="review-title">{selectedEbook.name}</h4>
+                    <div className="review-price">
+                      {selectedEbook.discount > 0 ? (
+                        <>
+                          <span className="original-price-large">{selectedEbook.price} USDT</span>
+                          <span className="final-price-large">
+                            {(Number(selectedEbook.price) * (100 - selectedEbook.discount) / 100).toFixed(2)} USDT
+                          </span>
+                          {selectedEbook.discount > 0 && (
+                            <span className="discount-tag-large">-{selectedEbook.discount}% OFF</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="final-price-large">{selectedEbook.price} USDT</span>
+                      )}
+                    </div>
+                    <div className="review-status">
+                      <span className={`status-badge ${selectedEbook.isSold ? 'sold' : 'available'}`}>
+                        {selectedEbook.isSold ? 'Sold Out' : 'Available'}
+                      </span>
+                      <span className="review-id">ID: {selectedEbook.id}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="review-description">
+                  <h5>Description:</h5>
+                  <div className="description-content">
+                    {selectedEbook.description || 'No description available for this ebook.'}
+                  </div>
+                </div>
+
+                <div className="review-actions">
+                  {!selectedEbook.isSold && (
+                    <button
+                      className="btn btn-buy-review"
+                      onClick={() => {
+                        closeReviewModal();
+                        // Scroll ke form pembelian ebook ini
+                        const ebookElement = document.querySelector(`.ebook-card[data-id="${selectedEbook.id}"]`);
+                        if (ebookElement) {
+                          ebookElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                    >
+                      {!account ? 'Connect Wallet to Purchase' : 'Go to Purchase Form'}
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-secondary"
+                    onClick={closeReviewModal}
+                  >
+                    Close Review
+                  </button>
+                </div>
               </div>
             </div>
           </div>
