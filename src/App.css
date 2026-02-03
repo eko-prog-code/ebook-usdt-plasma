@@ -2189,10 +2189,10 @@ textarea:focus-visible {
 @media (max-width: 768px) {
   /* Modal Review khusus untuk mobile - lebih lebar */
   .modal-review {
-    max-width: 98%;
-    width: 98%;
-    margin: 0.5rem auto;
-    max-height: 95vh;
+    max-width: 99%;
+    width: 99%;
+    margin: 0.25rem auto;
+    max-height: 90vh;
   }
   
   /* Perlebar konten dalam modal */
