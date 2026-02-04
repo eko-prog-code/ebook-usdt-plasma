@@ -1270,7 +1270,6 @@ function App() {
             <div className="section-header">
               <div className="section-title-container">
                 <h2 className="section-title">Available Ebooks</h2>
-                // Update bagian ini di dalam return statement App.jsx
                 <div className="ebook-filter-toggle">
                   <div className="filter-toggle-container">
                     <div className="filter-labels">
