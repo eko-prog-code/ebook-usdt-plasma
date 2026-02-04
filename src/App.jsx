@@ -129,8 +129,8 @@ const CONTRACT_ABI = [
       { "internalType": "bool", "name": "isPublished", "type": "bool" },
       { "internalType": "bool", "name": "isSold", "type": "bool" }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -143,8 +143,8 @@ const CONTRACT_ABI = [
       { "internalType": "uint256", "name": "amountPaid", "type": "uint256" },
       { "internalType": "uint256", "name": "purchaseTime", "type": "uint256" }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
 
   // Constants and info
@@ -152,29 +152,29 @@ const CONTRACT_ABI = [
     "inputs": [],
     "name": "MAX_EBOOKS",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [],
     "name": "USDT_ADDRESS",
     "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [],
     "name": "publishedCount",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [],
     "name": "owner",
     "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   }
 ];
 
@@ -186,8 +186,8 @@ const USDT_ABI = [
     ],
     "name": "approve",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    stateMutability: "nonpayable",
+    type: "function"
   },
   {
     "inputs": [
@@ -196,22 +196,22 @@ const USDT_ABI = [
     ],
     "name": "allowance",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "balanceOf",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   },
   {
     "inputs": [],
     "name": "decimals",
     "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function"
   }
 ];
 
@@ -239,7 +239,8 @@ function App() {
   const [networkStatus, setNetworkStatus] = useState('disconnected');
 
   // State untuk ebook
-  const [ebooks, setEbooks] = useState([]);
+  const [allEbooks, setAllEbooks] = useState([]); // Semua ebook
+  const [displayedEbooks, setDisplayedEbooks] = useState([]); // Ebook yang ditampilkan
   const [purchases, setPurchases] = useState([]);
   const [contractBalance, setContractBalance] = useState('0');
   const [isLoading, setIsLoading] = useState(false);
@@ -266,6 +267,9 @@ function App() {
   // State baru untuk modal Review Ebook
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedEbook, setSelectedEbook] = useState(null);
+
+  // State untuk toggle switch ebook
+  const [ebookFilter, setEbookFilter] = useState('all'); // 'all' atau 'unsold'
 
   // Debug state
   const [debugInfo, setDebugInfo] = useState({});
@@ -359,6 +363,15 @@ function App() {
       }
     }
   }, [contract, isOwner]);
+
+  // Update displayed ebooks when filter changes
+  useEffect(() => {
+    if (ebookFilter === 'all') {
+      setDisplayedEbooks(allEbooks);
+    } else {
+      setDisplayedEbooks(allEbooks.filter(ebook => !ebook.isSold));
+    }
+  }, [allEbooks, ebookFilter]);
 
   const handleAccountsChanged = (accounts) => {
     console.log('Accounts changed:', accounts);
@@ -611,7 +624,8 @@ function App() {
       }).filter(ebook => ebook.isPublished); // Filter only published ebooks
 
       console.log('Formatted ebooks (public):', formattedEbooks);
-      setEbooks(formattedEbooks);
+      setAllEbooks(formattedEbooks);
+      setDisplayedEbooks(formattedEbooks);
 
       // Initialize purchase forms for each ebook
       const initialForms = {};
@@ -703,7 +717,8 @@ function App() {
       }).filter(ebook => ebook.isPublished); // Filter only published ebooks
 
       console.log('Formatted ebooks (with wallet):', formattedEbooks);
-      setEbooks(formattedEbooks);
+      setAllEbooks(formattedEbooks);
+      setDisplayedEbooks(formattedEbooks);
 
       // Initialize purchase forms for each ebook
       const initialForms = {};
@@ -897,7 +912,7 @@ function App() {
       }));
 
       // Find the ebook
-      const ebook = ebooks.find(e => e.id === ebookId);
+      const ebook = allEbooks.find(e => e.id === ebookId);
       if (!ebook) {
         alert('Ebook not found!');
         return;
@@ -1049,7 +1064,7 @@ function App() {
   };
 
   const getAvailableEbookIds = () => {
-    const usedIds = ebooks.map(ebook => ebook.id);
+    const usedIds = allEbooks.map(ebook => ebook.id);
     return Array.from({ length: 10 }, (_, i) => i + 1)
       .filter(id => !usedIds.includes(id));
   };
@@ -1083,6 +1098,15 @@ function App() {
     if (description.length <= maxLength) return description;
     return description.substring(0, maxLength) + '...';
   };
+
+  // Fungsi untuk toggle filter ebook
+  const toggleEbookFilter = () => {
+    setEbookFilter(ebookFilter === 'all' ? 'unsold' : 'all');
+  };
+
+  // Hitung jumlah ebook yang belum terjual
+  const unsoldEbooksCount = allEbooks.filter(ebook => !ebook.isSold).length;
+  const soldEbooksCount = allEbooks.filter(ebook => ebook.isSold).length;
 
   return (
     <div className="app">
@@ -1244,9 +1268,42 @@ function App() {
           {/* Ebooks Grid - SELALU TAMPIL TANPA PERLU WALLET */}
           <div className="ebooks-grid">
             <div className="section-header">
-              <h2 className="section-title">Available Ebooks</h2>
+              <div className="section-title-container">
+                <h2 className="section-title">Available Ebooks</h2>
+                <div className="ebook-filter-toggle">
+                  <div className="filter-toggle-container">
+                    <div className="filter-labels">
+                      <span className={`filter-label ${ebookFilter === 'all' ? 'active' : ''}`}>
+                        📚 Semua Ebook ({allEbooks.length})
+                      </span>
+                      <span className={`filter-label ${ebookFilter === 'unsold' ? 'active' : ''}`}>
+                        🛒 Belum Terjual ({unsoldEbooksCount})
+                      </span>
+                    </div>
+                    <div className="toggle-switch" onClick={toggleEbookFilter}>
+                      <div className={`toggle-slider ${ebookFilter === 'unsold' ? 'slider-right' : 'slider-left'}`}>
+                        <div className="slider-icon">
+                          {ebookFilter === 'all' ? '📚' : '🛒'}
+                        </div>
+                      </div>
+                      <div className="toggle-background"></div>
+                    </div>
+                    <div className="filter-info">
+                      {ebookFilter === 'all' ? (
+                        <span className="filter-info-text">
+                          Menampilkan semua ebook: {unsoldEbooksCount} belum terjual, {soldEbooksCount} terjual
+                        </span>
+                      ) : (
+                        <span className="filter-info-text">
+                          Menampilkan hanya ebook yang belum terjual
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="section-actions">
-                <span className="ebooks-count">{ebooks.length} ebooks available</span>
+                <span className="ebooks-count">{displayedEbooks.length} ebooks ditampilkan</span>
                 <button
                   className="btn btn-refresh-small"
                   onClick={refreshData}
@@ -1257,29 +1314,45 @@ function App() {
               </div>
             </div>
 
-            {isLoading && ebooks.length === 0 ? (
+            {isLoading && displayedEbooks.length === 0 ? (
               <div className="loading">
                 <div className="spinner"></div>
                 <p>Loading ebooks...</p>
               </div>
-            ) : ebooks.length === 0 ? (
+            ) : displayedEbooks.length === 0 ? (
               <div className="no-ebooks">
-                <div className="no-ebooks-icon">📚</div>
-                <p>No ebooks available yet.</p>
-                {isOwner && account ? (
+                <div className="no-ebooks-icon">
+                  {ebookFilter === 'all' ? '📚' : '🛒'}
+                </div>
+                <p>
+                  {ebookFilter === 'all' 
+                    ? 'No ebooks available yet.' 
+                    : 'All ebooks have been sold. Check back later!'}
+                </p>
+                {ebookFilter === 'unsold' && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setEbookFilter('all')}
+                  >
+                    Tampilkan Semua Ebook
+                  </button>
+                )}
+                {isOwner && account && ebookFilter === 'all' ? (
                   <button
                     className="btn btn-owner"
                     onClick={() => setShowPublishModal(true)}
                   >
-                    Publish Your First Ebook
+                    Publish New Ebook
                   </button>
                 ) : (
-                  <p className="connect-hint">Connect wallet as owner to publish ebooks</p>
+                  !account && ebookFilter === 'all' && (
+                    <p className="connect-hint">Connect wallet as owner to publish ebooks</p>
+                  )
                 )}
               </div>
             ) : (
               <div className="grid">
-                {ebooks.map(ebook => {
+                {displayedEbooks.map(ebook => {
                   const purchaseForm = purchaseForms[ebook.id] || {};
                   const isProcessing = purchaseForm.isProcessing || false;
 
@@ -1326,7 +1399,7 @@ function App() {
 
                         <div className="ebook-meta">
                           <span className="ebook-id">ID: {ebook.id}</span>
-                          <span className="ebook-status">
+                          <span className={`ebook-status ${ebook.isSold ? 'sold' : 'available'}`}>
                             {ebook.isSold ? 'Sold' : 'Available'}
                           </span>
                         </div>
@@ -1452,7 +1525,7 @@ function App() {
           )}
 
           {/* Connect Prompt untuk pembelian */}
-          {!account && ebooks.some(ebook => !ebook.isSold) && (
+          {!account && displayedEbooks.some(ebook => !ebook.isSold) && (
             <div className="connect-prompt">
               <div className="connect-prompt-content">
                 <div className="connect-icon">🔗</div>
