@@ -263,7 +263,7 @@ function App() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
-  
+
   // State baru untuk modal Review Ebook
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedEbook, setSelectedEbook] = useState(null);
@@ -1270,6 +1270,7 @@ function App() {
             <div className="section-header">
               <div className="section-title-container">
                 <h2 className="section-title">Available Ebooks</h2>
+                // Update bagian ini di dalam return statement App.jsx
                 <div className="ebook-filter-toggle">
                   <div className="filter-toggle-container">
                     <div className="filter-labels">
@@ -1280,13 +1281,15 @@ function App() {
                         🛒 Belum Terjual ({unsoldEbooksCount})
                       </span>
                     </div>
-                    <div className="toggle-switch" onClick={toggleEbookFilter}>
-                      <div className={`toggle-slider ${ebookFilter === 'unsold' ? 'slider-right' : 'slider-left'}`}>
-                        <div className="slider-icon">
-                          {ebookFilter === 'all' ? '📚' : '🛒'}
+                    <div className="toggle-switch-wrapper">
+                      <div className="toggle-switch" onClick={toggleEbookFilter}>
+                        <div className={`toggle-slider ${ebookFilter === 'unsold' ? 'slider-right' : 'slider-left'}`}>
+                          <div className="slider-icon">
+                            {ebookFilter === 'all' ? '📚' : '🛒'}
+                          </div>
                         </div>
+                        <div className="toggle-background"></div>
                       </div>
-                      <div className="toggle-background"></div>
                     </div>
                     <div className="filter-info">
                       {ebookFilter === 'all' ? (
@@ -1325,8 +1328,8 @@ function App() {
                   {ebookFilter === 'all' ? '📚' : '🛒'}
                 </div>
                 <p>
-                  {ebookFilter === 'all' 
-                    ? 'No ebooks available yet.' 
+                  {ebookFilter === 'all'
+                    ? 'No ebooks available yet.'
                     : 'All ebooks have been sold. Check back later!'}
                 </p>
                 {ebookFilter === 'unsold' && (
@@ -1370,7 +1373,7 @@ function App() {
 
                       <div className="ebook-info">
                         <h3 className="ebook-title">{ebook.name}</h3>
-                        
+
                         {/* Deskripsi singkat dengan tombol Review */}
                         <div className="ebook-description-container">
                           <p className="ebook-description">
@@ -1873,7 +1876,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="review-description">
                   <h5>Description:</h5>
                   <div className="description-content">
